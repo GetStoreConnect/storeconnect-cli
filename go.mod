@@ -1,6 +1,6 @@
 module github.com/GetStoreConnect/storeconnect-cli
 
-go 1.25.0
+go 1.21
 
 require (
 	github.com/briandowns/spinner v1.23.2
