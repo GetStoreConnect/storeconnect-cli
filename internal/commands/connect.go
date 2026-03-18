@@ -238,35 +238,3 @@ func normalizeURL(url string) string {
 	return strings.TrimSuffix(url, "/")
 }
 
-func promptForOrgID() (string, error) {
-	fmt.Print("Enter Organization ID (15 or 18 chars, starts with 00D): ")
-	reader := bufio.NewReader(os.Stdin)
-	orgID, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	return strings.TrimSpace(orgID), nil
-}
-
-func promptForStoreID() (string, error) {
-	fmt.Print("Enter Store Salesforce ID (15 or 18 alphanumeric characters): ")
-	reader := bufio.NewReader(os.Stdin)
-	storeID, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	return strings.TrimSpace(storeID), nil
-}
-
-func promptForAPIKey() (string, error) {
-	fmt.Print("Enter API key (hidden): ")
-	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	fmt.Println()
-	return strings.TrimSpace(string(bytePassword)), nil
-}
