@@ -28,27 +28,27 @@ func NewFormatter() *Formatter {
 
 // Success prints a success message
 func (f *Formatter) Success(message string) {
-	f.success.Println("✓ " + message)
+	_, _ = f.success.Println("✓ " + message)
 }
 
 // Error prints an error message
 func (f *Formatter) Error(message string) {
-	f.error.Println("✗ " + message)
+	_, _ = f.error.Println("✗ " + message)
 }
 
 // Warning prints a warning message
 func (f *Formatter) Warning(message string) {
-	f.warning.Println("⚠ " + message)
+	_, _ = f.warning.Println("⚠ " + message)
 }
 
 // Info prints an info message
 func (f *Formatter) Info(message string) {
-	f.info.Println("ℹ " + message)
+	_, _ = f.info.Println("ℹ " + message)
 }
 
 // Dim prints a dimmed message
 func (f *Formatter) Dim(message string) {
-	f.dim.Println(message)
+	_, _ = f.dim.Println(message)
 }
 
 // Newline prints a blank line
