@@ -42,13 +42,11 @@ func TestContentChangesCreate(t *testing.T) {
 				assert.Equal(t, "/api/v1/content_changes", r.URL.Path)
 				assert.Equal(t, http.MethodPost, r.Method)
 
-				// Verify request body contains theme_id in custom_data
+				// Verify request body contains theme_id
 				var body map[string]interface{}
 				err := json.NewDecoder(r.Body).Decode(&body)
 				require.NoError(t, err)
-				customData, ok := body["custom_data"].(map[string]interface{})
-				require.True(t, ok)
-				assert.Equal(t, tt.themeID, customData["theme_id"])
+				assert.Equal(t, tt.themeID, body["theme_id"])
 
 				w.Header().Set("Content-Type", "application/json")
 				w.WriteHeader(tt.serverStatus)
@@ -97,7 +95,7 @@ func TestContentChangesUpdate(t *testing.T) {
 	client := NewClient(server.URL, "test-store", "test-key")
 	ccService := NewContentChanges(client)
 
-	err := ccService.Update("cc-123", templates)
+	err := ccService.Update("cc-123", "theme-123", templates)
 	require.NoError(t, err)
 }
 
