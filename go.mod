@@ -1,6 +1,8 @@
 module github.com/GetStoreConnect/storeconnect-cli
 
-go 1.21
+go 1.23.0
+
+toolchain go1.23.12
 
 require (
 	github.com/briandowns/spinner v1.23.2
@@ -31,6 +33,6 @@ require (
 	github.com/subosito/gotenv v1.6.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/net v0.23.0 // indirect
-	golang.org/x/sys v0.18.0 // indirect
-	golang.org/x/text v0.14.0 // indirect
+	golang.org/x/sys v0.29.0 // indirect
+	golang.org/x/text v0.28.0 // indirect
 )
