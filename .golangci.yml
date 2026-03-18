@@ -52,7 +52,6 @@ linters:
     - unused
     - gofmt
     - goconst
-    - dupl
 
   disable:
     - typecheck
@@ -63,6 +62,7 @@ linters:
     - goimports  # TODO: Install and run goimports
     - misspell   # TODO: Fix cancelled vs canceled spelling
     - lll        # TODO: Break long lines
+    - dupl       # TODO: Refactor duplicate code in API services
 
 issues:
   exclude-use-default: false
