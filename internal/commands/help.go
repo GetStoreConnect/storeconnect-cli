@@ -31,11 +31,11 @@ type FlagHelp struct {
 // GetCommandHelp extracts help information from a Cobra command
 func GetCommandHelp(cmd *cobra.Command) CommandHelp {
 	help := CommandHelp{
-		Name:   cmd.Name(),
-		Usage:  cmd.UseLine(),
-		Short:  cmd.Short,
-		Long:   cmd.Long,
-		Flags:  []FlagHelp{},
+		Name:  cmd.Name(),
+		Usage: cmd.UseLine(),
+		Short: cmd.Short,
+		Long:  cmd.Long,
+		Flags: []FlagHelp{},
 	}
 
 	// Extract flags
