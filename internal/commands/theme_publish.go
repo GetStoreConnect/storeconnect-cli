@@ -94,7 +94,8 @@ func runThemePublish(cmd *cobra.Command, args []string) error {
 		spinner.Start()
 	}
 
-	if err := contentChangesService.Publish(syncState.ContentChangeSCID); err != nil {
+	publishResp, err := contentChangesService.Publish(syncState.ContentChangeSCID)
+	if err != nil {
 		if spinner != nil {
 			spinner.Error(fmt.Sprintf("Failed to publish theme: %v", err))
 		}
@@ -103,11 +104,26 @@ func runThemePublish(cmd *cobra.Command, args []string) error {
 
 	contentChangeID := syncState.ContentChangeSCID
 
-	// Clear content change from sync state
-	syncState.ClearContentChange()
+	// Check if this was submitted for approval or actually published
+	if publishResp.Status == "review" {
+		// Submitted for approval - keep content change in sync state
+		if spinner != nil {
+			spinner.Stop()
+			formatter.Info(publishResp.Message)
+			if publishResp.Note != "" {
+				formatter.Dim(publishResp.Note)
+			}
+			formatter.Newline()
+			formatter.Dim(fmt.Sprintf("Content change ID: %s", contentChangeID))
+			formatter.Dim("The theme will be published after approval in Salesforce")
+		}
+	} else {
+		// Actually published - clear content change from sync state
+		syncState.ClearContentChange()
 
-	if spinner != nil {
-		spinner.Success(fmt.Sprintf("Published theme '%s' to live site", themeName))
+		if spinner != nil {
+			spinner.Success(publishResp.Message)
+		}
 	}
 
 	// JSON output
@@ -115,7 +131,8 @@ func runThemePublish(cmd *cobra.Command, args []string) error {
 		return outputResponse(ThemePublishResponse{
 			ThemeName:       themeName,
 			ContentChangeID: contentChangeID,
-			Status:          "published",
+			Status:          publishResp.Status,
+			Message:         publishResp.Message,
 		}, nil)
 	}
 
