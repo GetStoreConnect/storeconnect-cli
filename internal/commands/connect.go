@@ -1,18 +1,14 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
-	"syscall"
 
 	"github.com/GetStoreConnect/storeconnect-cli/internal/api"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/config"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/ui"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var connectCmd = &cobra.Command{
