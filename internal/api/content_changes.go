@@ -1,5 +1,7 @@
 package api
 
+import "errors"
+
 // ContentChange represents a draft change set
 type ContentChange struct {
 	SCID       string                 `json:"sc_id"`
@@ -81,10 +83,33 @@ func (cc *ContentChanges) GetPreviewURL(id string) (string, error) {
 	return result.PreviewURL, nil
 }
 
-// Publish publishes a content change to live
+// Publish publishes a content change to live.
+//
+// Production stores answer 403 when the change still needs approval - the
+// server moves the draft to review, so that is a successful submission for
+// the CLI, not an error.
 func (cc *ContentChanges) Publish(id string) (*PublishResponse, error) {
 	var result PublishResponse
 	err := cc.client.Post("/api/v1/content_changes/"+id+"/publish", nil, &result)
+	if err != nil {
+		var apiErr *APIError
+		if errors.As(err, &apiErr) && apiErr.StatusCode == 403 {
+			return &PublishResponse{
+				Message: apiErr.Message,
+				Status:  "review",
+				SCID:    id,
+			}, nil
+		}
+		return nil, err
+	}
+	return &result, nil
+}
+
+// Submit pushes a draft content change to Salesforce for review without
+// publishing it - the Change Request flow
+func (cc *ContentChanges) Submit(id string) (*ContentChange, error) {
+	var result ContentChange
+	err := cc.client.Post("/api/v1/content_changes/"+id+"/submit", nil, &result)
 	if err != nil {
 		return nil, err
 	}

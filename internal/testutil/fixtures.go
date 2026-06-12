@@ -59,21 +59,21 @@ func TestProduct() *api.Product {
 // TestArticle returns a sample article for testing
 func TestArticle() *api.Article {
 	return &api.Article{
-		SCID:    "test-article",
-		SFID:    "a0C7Z000000XyZ2UAK",
-		Title:   "Test Article",
-		Content: "This is test article content",
-		Slug:    "test-article",
+		SCID:         "test-article",
+		SFID:         "a0C7Z000000XyZ2UAK",
+		Title:        "Test Article",
+		BodyMarkdown: "This is test article content",
+		Path:         "test-article",
 	}
 }
 
 // TestContentBlock returns a sample content block for testing
 func TestContentBlock() *api.ContentBlock {
 	return &api.ContentBlock{
-		SCID:    "test-block",
-		SFID:    "a0D7Z000000XyZ3UAK",
-		Name:    "Test Block",
-		Content: "This is test block content",
-		Type:    "html",
+		SCID:       "test-block",
+		SFID:       "a0D7Z000000XyZ3UAK",
+		Name:       "Test Block",
+		Identifier: "test-block",
+		Template:   "html",
 	}
 }

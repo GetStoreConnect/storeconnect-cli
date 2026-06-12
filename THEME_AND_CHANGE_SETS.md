@@ -949,16 +949,84 @@ sc theme session status "My Custom Theme"
 ### Phase 4: Upgrade & Migration (Week 4-5)
 
 **Tasks:**
-1. Implement parent theme switching
-2. Create migration tools
-3. Build diff/preview for upgrades
-4. Write upgrade documentation
-5. Test upgrade paths
+1. Implement hybrid base theme installation (Approach 4)
+   - Static resource installation (primary)
+   - API callout fallback
+   - CLI manual installation (last resort)
+2. Implement parent theme switching with preview
+3. Create migration tools and conflict detection
+4. Build diff/preview for upgrades
+5. Write upgrade documentation
+6. Test upgrade paths
 
 **Success Criteria:**
-- Customers can upgrade base theme version
-- Preview before committing
-- Rollback if needed
+- Base theme auto-installs on package upgrade
+- Customers can preview base theme upgrades
+- Switch parent theme with approval flow
+- Conflict detection between overrides and new parent
+- Rollback capability if issues found
+- Clear upgrade path documentation
+
+**Base Theme Installation (Hybrid Approach)**:
+
+When StoreConnect package upgrades from v21 to v22:
+
+**Method 1: Static Resource (Primary)**
+```apex
+// Post-install script tries static resource first
+global class StoreConnectPostInstall implements InstallHandler {
+    global void onInstall(InstallContext context) {
+        String version = getTargetVersion(context);
+        Boolean installed = false;
+
+        // Try static resource (fast, reliable, offline)
+        try {
+            installed = installFromStaticResource(version);
+            if (installed) {
+                System.debug('✓ Installed from Static Resource');
+                return;
+            }
+        } catch (Exception e) {
+            System.debug('Static Resource install failed: ' + e.getMessage());
+        }
+
+        // Fallback to API callout
+        if (!installed) {
+            System.enqueueJob(new BaseThemeInstallJob(version));
+            sendAdminEmail('Base theme installation queued', version);
+        }
+    }
+}
+```
+
+**Method 2: API Callout (Fallback)**
+- Async job calls gem API: `GET /api/v1/base_themes/:version`
+- Gem returns JSON with all templates
+- Salesforce creates Theme + Templates
+- Used for hot-fixes or if static resource fails
+
+**Method 3: CLI Manual (Last Resort)**
+```bash
+sc base-theme install --version 22.0.0 --org production
+```
+
+**Parent Theme Preview & Switching**:
+
+```bash
+# Preview upgrade (doesn't commit)
+sc theme preview-upgrade "Acme Store" --to "Base Theme v22"
+# Returns: https://acme.example.com/?preview-parent=base-v22-sc-id
+# Shows: Conflict detection report
+
+# If good, commit upgrade
+sc theme upgrade "Acme Store" --to "Base Theme v22"
+# Creates ContentChange for approval
+# After approval: updates parent_theme_id
+
+# If issues, rollback
+sc theme rollback "Acme Store"
+# Reverts to previous parent (from history)
+```
 
 ### Phase 5: CLI Polish (Week 5-6)
 

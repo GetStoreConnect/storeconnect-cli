@@ -67,8 +67,8 @@ func runCategoryList(cmd *cobra.Command, args []string) error {
 
 	for _, category := range categories {
 		fmt.Printf("  • %s", category.Name)
-		if category.Slug != "" {
-			fmt.Printf(" (%s)", category.Slug)
+		if category.Path != "" {
+			fmt.Printf(" (%s)", category.Path)
 		}
 		fmt.Println()
 	}
