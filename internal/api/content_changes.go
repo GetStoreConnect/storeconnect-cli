@@ -4,16 +4,20 @@ import "errors"
 
 // ContentChange represents a draft change set
 type ContentChange struct {
-	SCID       string                 `json:"sc_id"`
-	SFID       string                 `json:"sfid,omitempty"`
-	Status     string                 `json:"status"`
-	CustomData map[string]interface{} `json:"custom_data,omitempty"`
+	SCID         string                 `json:"sc_id"`
+	SFID         string                 `json:"sfid,omitempty"`
+	Status       string                 `json:"status"`
+	Summary      string                 `json:"summary,omitempty"`
+	RecordsCount int                    `json:"records_count,omitempty"`
+	CreatedAt    string                 `json:"created_at,omitempty"`
+	CustomData   map[string]interface{} `json:"custom_data,omitempty"`
 }
 
 // ContentChangeRequest represents a request to create/update content changes
 type ContentChangeRequest struct {
 	ThemeID   string                  `json:"theme_id,omitempty"`
 	Templates []ContentChangeTemplate `json:"templates,omitempty"`
+	Assets    []ContentChangeAsset    `json:"assets,omitempty"`
 }
 
 // ContentChangeTemplate represents a template change
@@ -21,6 +25,17 @@ type ContentChangeTemplate struct {
 	Key     string `json:"key"`
 	Content string `json:"content"`
 	Action  string `json:"action"` // "create", "update", or "delete"
+}
+
+// ContentChangeAsset represents an uploaded or changed binary asset that
+// should be registered on the draft. URL is the hosted location returned by
+// the media upload flow; ContentHash lets the server skip re-processing
+// unchanged binaries.
+type ContentChangeAsset struct {
+	Key         string `json:"key"`
+	URL         string `json:"url"`
+	ContentType string `json:"content_type,omitempty"`
+	ContentHash string `json:"content_hash,omitempty"`
 }
 
 // PreviewURLResponse represents the preview URL response
@@ -62,15 +77,41 @@ func (cc *ContentChanges) Create(themeID string) (*ContentChange, error) {
 	return &result, nil
 }
 
-// Update adds template changes to an existing content change
-func (cc *ContentChanges) Update(id string, themeID string, templates []ContentChangeTemplate) error {
-	body := map[string]interface{}{
-		"theme_id":  themeID,
-		"templates": templates,
+// Update adds template and asset changes to an existing content change.
+//
+// Assets are the binaries already uploaded through the media flow; passing an
+// empty slice simply omits them from the request body.
+func (cc *ContentChanges) Update(id string, themeID string, templates []ContentChangeTemplate, assets []ContentChangeAsset) error {
+	body := ContentChangeRequest{
+		ThemeID:   themeID,
+		Templates: templates,
+		Assets:    assets,
 	}
 
 	var result ContentChange
 	return cc.client.Patch("/api/v1/content_changes/"+id, body, &result)
+}
+
+// List returns the store's content changes, optionally filtered by status.
+//
+// Drafts created from one machine can be discovered and resumed from another
+// by listing them here.
+func (cc *ContentChanges) List(status string) ([]ContentChange, error) {
+	var result struct {
+		Data []ContentChange `json:"data"`
+	}
+
+	var params map[string]string
+	if status != "" {
+		params = map[string]string{"status": status}
+	}
+
+	err := cc.client.Get("/api/v1/content_changes", &result, params)
+	if err != nil {
+		return nil, err
+	}
+
+	return result.Data, nil
 }
 
 // GetPreviewURL gets the preview URL for a content change

@@ -20,9 +20,10 @@ func TestTheme() *api.Theme {
 		},
 		Assets: []api.ThemeAsset{
 			{
-				Filename:    "logo.png",
-				ContentType: "image/png",
+				Key:         "logo.png",
 				URL:         "https://example.com/logo.png",
+				ContentType: "image/png",
+				ContentHash: "abc123",
 			},
 		},
 		Variables: map[string]interface{}{
