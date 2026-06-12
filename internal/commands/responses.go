@@ -81,4 +81,5 @@ type ThemePublishResponse struct {
 	ThemeName       string `json:"theme_name"`
 	ContentChangeID string `json:"content_change_id"`
 	Status          string `json:"status"`
+	Message         string `json:"message,omitempty"`
 }

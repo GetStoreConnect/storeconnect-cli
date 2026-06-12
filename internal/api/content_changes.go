@@ -26,6 +26,15 @@ type PreviewURLResponse struct {
 	PreviewURL string `json:"preview_url"`
 }
 
+// PublishResponse represents the publish response
+type PublishResponse struct {
+	Message     string `json:"message"`
+	Status      string `json:"status"`
+	SCID        string `json:"sc_id"`
+	Note        string `json:"note,omitempty"`
+	PublishedAt string `json:"published_at,omitempty"`
+}
+
 // ContentChanges handles content change endpoints
 type ContentChanges struct {
 	client *Client
@@ -73,9 +82,13 @@ func (cc *ContentChanges) GetPreviewURL(id string) (string, error) {
 }
 
 // Publish publishes a content change to live
-func (cc *ContentChanges) Publish(id string) error {
-	var result ContentChange
-	return cc.client.Post("/api/v1/content_changes/"+id+"/publish", nil, &result)
+func (cc *ContentChanges) Publish(id string) (*PublishResponse, error) {
+	var result PublishResponse
+	err := cc.client.Post("/api/v1/content_changes/"+id+"/publish", nil, &result)
+	if err != nil {
+		return nil, err
+	}
+	return &result, nil
 }
 
 // Get retrieves a content change by ID
