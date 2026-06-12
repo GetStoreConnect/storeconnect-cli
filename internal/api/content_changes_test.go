@@ -191,7 +191,7 @@ func TestContentChangesPublish(t *testing.T) {
 			client := NewClient(server.URL, "test-store", "test-key")
 			ccService := NewContentChanges(client)
 
-			err := ccService.Publish(tt.ccID)
+			_, err := ccService.Publish(tt.ccID)
 
 			if tt.wantErr {
 				require.Error(t, err)
