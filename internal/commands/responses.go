@@ -1,6 +1,10 @@
 package commands
 
-import "time"
+import (
+	"time"
+
+	"github.com/GetStoreConnect/storeconnect-cli/internal/theme"
+)
 
 // SuccessResponse is the standard JSON success response format
 type SuccessResponse struct {
@@ -82,4 +86,15 @@ type ThemePublishResponse struct {
 	ContentChangeID string `json:"content_change_id"`
 	Status          string `json:"status"`
 	Message         string `json:"message,omitempty"`
+}
+
+// ThemeDiffResponse is the response for the theme diff command: the divergence
+// between the local theme and the server, plus rolled-up counts.
+type ThemeDiffResponse struct {
+	ThemeName  string             `json:"theme_name"`
+	Templates  theme.CategoryDiff `json:"templates"`
+	Assets     theme.CategoryDiff `json:"assets"`
+	HasChanges bool               `json:"has_changes"`
+	Pushable   int                `json:"pushable"`
+	ServerOnly int                `json:"server_only"`
 }
