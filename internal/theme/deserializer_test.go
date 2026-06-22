@@ -33,7 +33,8 @@ func TestDeserializer_Deserialize(t *testing.T) {
 			setup: func(t *testing.T, basePath string) string {
 				// Serialize a complete theme first
 				theme := testutil.TestTheme()
-				serializer := NewSerializer(basePath)
+				serializer := NewSerializer(basePath).
+					WithDownloader(func(url string) ([]byte, error) { return []byte("stub-asset"), nil })
 				err := serializer.Serialize(theme)
 				require.NoError(t, err)
 				return theme.Name
@@ -490,10 +491,10 @@ font_family: Arial`,
 		},
 		{
 			name: "array data",
-			content: `- filename: logo.png
+			content: `- key: logo.png
   content_type: image/png
   url: https://example.com/logo.png
-- filename: style.css
+- key: style.css
   content_type: text/css
   url: https://example.com/style.css`,
 			wantErr: false,
@@ -504,7 +505,7 @@ font_family: Arial`,
 
 				first, ok := arr[0].(map[string]interface{})
 				require.True(t, ok)
-				assert.Equal(t, "logo.png", first["filename"])
+				assert.Equal(t, "logo.png", first["key"])
 			},
 		},
 		{
@@ -612,12 +613,14 @@ func TestDeserializer_AssetsTypeAssertion(t *testing.T) {
 	testutil.WriteTestFile(t, filepath.Join(themePath, "theme.yml"), string(data))
 
 	// Write assets.json
-	assets := `- filename: logo.png
+	assets := `- key: logo.png
   content_type: image/png
   url: https://example.com/logo.png
-- filename: style.css
+  content_hash: hash1
+- key: style.css
   content_type: text/css
-  url: https://example.com/style.css`
+  url: https://example.com/style.css
+  content_hash: hash2`
 	testutil.WriteTestFile(t, filepath.Join(themePath, "assets.json"), assets)
 
 	deserializer := NewDeserializer(basePath)
@@ -625,10 +628,11 @@ func TestDeserializer_AssetsTypeAssertion(t *testing.T) {
 	require.NoError(t, err)
 
 	require.Len(t, theme.Assets, 2)
-	assert.Equal(t, "logo.png", theme.Assets[0].Filename)
+	assert.Equal(t, "logo.png", theme.Assets[0].Key)
 	assert.Equal(t, "image/png", theme.Assets[0].ContentType)
 	assert.Equal(t, "https://example.com/logo.png", theme.Assets[0].URL)
-	assert.Equal(t, "style.css", theme.Assets[1].Filename)
+	assert.Equal(t, "hash1", theme.Assets[0].ContentHash)
+	assert.Equal(t, "style.css", theme.Assets[1].Key)
 }
 
 func TestDeserializer_InvalidAssetsFormat(t *testing.T) {

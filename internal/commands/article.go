@@ -58,8 +58,8 @@ func runArticleList(cmd *cobra.Command, args []string) error {
 
 	for _, article := range articles {
 		fmt.Printf("  • %s", article.Title)
-		if article.Slug != "" {
-			fmt.Printf(" (/%s)", article.Slug)
+		if article.Path != "" {
+			fmt.Printf(" (/%s)", article.Path)
 		}
 		fmt.Println()
 	}

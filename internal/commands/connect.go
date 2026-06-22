@@ -1,18 +1,14 @@
 package commands
 
 import (
-	"bufio"
 	"fmt"
-	"os"
 	"strings"
-	"syscall"
 
 	"github.com/GetStoreConnect/storeconnect-cli/internal/api"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/config"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/ui"
 	"github.com/GetStoreConnect/storeconnect-cli/internal/utils"
 	"github.com/spf13/cobra"
-	"golang.org/x/term"
 )
 
 var connectCmd = &cobra.Command{
@@ -42,21 +38,27 @@ GENERATING AN API KEY:
   4. Copy the generated key (you can't view it again)
 
 EXAMPLES:
-  # Provide store ID interactively (recommended)
+  # Interactive mode (prompts for credentials)
   sc connect https://dev.mystore.com --alias dev
 
-  # Or provide via flag
-  sc connect https://dev.mystore.com --store-id a0A... --alias dev
+  # Non-interactive mode with flags
+  sc connect https://dev.mystore.com --alias dev \
+    --org-id 00D000000000062 \
+    --store-id a0A7Z00000AbCdEFGH \
+    --api-key your-api-key \
+    --non-interactive
 
-  # With Organization ID pre-filled
-  sc connect https://staging.mystore.com --store-id a0A... --org-id 00D000000000062 --alias staging
-
-After connecting, run 'sc theme refresh' to download themes.
+  # Using environment variables
+  export SC_ORG_ID=00D000000000062
+  export SC_STORE_ID=a0A7Z00000AbCdEFGH
+  export SC_API_KEY=your-api-key
+  sc connect https://dev.mystore.com --alias dev --non-interactive
 
 SECURITY NOTE:
   • API keys are stored securely in ~/.storeconnect/credentials.yml (0600 permissions)
   • Project config contains NO secrets and is safe to commit to git
-  • Each developer should have their own API key`,
+  • Each developer should have their own API key
+  • Use environment variables or flags for CI/CD automation`,
 	Args: cobra.ExactArgs(1),
 	RunE: runConnect,
 }
@@ -64,14 +66,16 @@ SECURITY NOTE:
 var (
 	connectOrgID   string
 	connectStoreID string
+	connectAPIKey  string
 	connectAlias   string
 )
 
 func init() {
 	rootCmd.AddCommand(connectCmd)
 
-	connectCmd.Flags().StringVar(&connectOrgID, "org-id", "", "Salesforce Organization ID (will prompt if not provided)")
-	connectCmd.Flags().StringVar(&connectStoreID, "store-id", "", "Store Salesforce ID (will prompt if not provided)")
+	connectCmd.Flags().StringVar(&connectOrgID, "org-id", "", "Salesforce Organization ID (or set SC_ORG_ID env var)")
+	connectCmd.Flags().StringVar(&connectStoreID, "store-id", "", "Store Salesforce ID (or set SC_STORE_ID env var)")
+	connectCmd.Flags().StringVar(&connectAPIKey, "api-key", "", "API key (or set SC_API_KEY env var)")
 	connectCmd.Flags().StringVar(&connectAlias, "alias", "", "Alias name for this server (e.g., dev, staging, prod)")
 	connectCmd.MarkFlagRequired("alias")
 }
@@ -80,14 +84,19 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	url := normalizeURL(args[0])
 	formatter := ui.NewFormatter()
 
-	// Prompt for org ID if not provided
-	if connectOrgID == "" {
-		orgID, err := promptForOrgID()
-		if err != nil {
-			formatter.Error(fmt.Sprintf("Failed to read Organization ID: %v", err))
-			return err
+	// Get org ID from flag, env, or prompt
+	var err error
+	connectOrgID, err = getCredentialInput(
+		connectOrgID,
+		"SC_ORG_ID",
+		"Organization ID (15 or 18 chars, starts with 00D)",
+		"org-id",
+	)
+	if err != nil {
+		if !jsonOutput {
+			formatter.Error(err.Error())
 		}
-		connectOrgID = orgID
+		return outputError(err)
 	}
 
 	// Validate org ID
@@ -104,14 +113,18 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	}
 	connectOrgID = normalizedOrgID
 
-	// Prompt for store ID if not provided
-	if connectStoreID == "" {
-		storeID, err := promptForStoreID()
-		if err != nil {
-			formatter.Error(fmt.Sprintf("Failed to read Store ID: %v", err))
-			return err
+	// Get store ID from flag, env, or prompt
+	connectStoreID, err = getCredentialInput(
+		connectStoreID,
+		"SC_STORE_ID",
+		"Store Salesforce ID (15 or 18 alphanumeric characters)",
+		"store-id",
+	)
+	if err != nil {
+		if !jsonOutput {
+			formatter.Error(err.Error())
 		}
-		connectStoreID = storeID
+		return outputError(err)
 	}
 
 	// Validate store ID
@@ -128,11 +141,18 @@ func runConnect(cmd *cobra.Command, args []string) error {
 	}
 	connectStoreID = normalizedStoreID
 
-	// Always prompt for API key interactively (prevents shell history exposure)
-	apiKey, err := promptForAPIKey()
+	// Get API key from flag, env, or secure prompt
+	apiKey, err := getSecretInput(
+		connectAPIKey,
+		"SC_API_KEY",
+		"API key (hidden)",
+		"api-key",
+	)
 	if err != nil {
-		formatter.Error(fmt.Sprintf("Failed to read API key: %v", err))
-		return err
+		if !jsonOutput {
+			formatter.Error(err.Error())
+		}
+		return outputError(err)
 	}
 
 	// Load credentials
@@ -212,37 +232,4 @@ func normalizeURL(url string) string {
 		url = "https://" + url
 	}
 	return strings.TrimSuffix(url, "/")
-}
-
-func promptForOrgID() (string, error) {
-	fmt.Print("Enter Organization ID (15 or 18 chars, starts with 00D): ")
-	reader := bufio.NewReader(os.Stdin)
-	orgID, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	return strings.TrimSpace(orgID), nil
-}
-
-func promptForStoreID() (string, error) {
-	fmt.Print("Enter Store Salesforce ID (15 or 18 alphanumeric characters): ")
-	reader := bufio.NewReader(os.Stdin)
-	storeID, err := reader.ReadString('\n')
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	return strings.TrimSpace(storeID), nil
-}
-
-func promptForAPIKey() (string, error) {
-	fmt.Print("Enter API key (hidden): ")
-	bytePassword, err := term.ReadPassword(int(syscall.Stdin))
-	if err != nil {
-		return "", err
-	}
-	fmt.Println()
-	fmt.Println()
-	return strings.TrimSpace(string(bytePassword)), nil
 }

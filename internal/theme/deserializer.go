@@ -61,14 +61,17 @@ func (d *Deserializer) Deserialize(themeName string) (*api.Theme, error) {
 			for _, a := range assetsList {
 				if assetMap, ok := a.(map[string]interface{}); ok {
 					asset := api.ThemeAsset{}
-					if filename, ok := assetMap["filename"].(string); ok {
-						asset.Filename = filename
+					if key, ok := assetMap["key"].(string); ok {
+						asset.Key = key
+					}
+					if url, ok := assetMap["url"].(string); ok {
+						asset.URL = url
 					}
 					if contentType, ok := assetMap["content_type"].(string); ok {
 						asset.ContentType = contentType
 					}
-					if url, ok := assetMap["url"].(string); ok {
-						asset.URL = url
+					if contentHash, ok := assetMap["content_hash"].(string); ok {
+						asset.ContentHash = contentHash
 					}
 					theme.Assets = append(theme.Assets, asset)
 				}

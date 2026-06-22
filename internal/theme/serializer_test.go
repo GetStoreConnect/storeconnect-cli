@@ -20,6 +20,75 @@ func TestNewSerializer(t *testing.T) {
 	assert.Equal(t, basePath, serializer.basePath)
 }
 
+func TestSerializer_DownloadsAssets(t *testing.T) {
+	basePath, cleanup := testutil.CreateTempProject(t)
+	defer cleanup()
+
+	theme := &api.Theme{
+		SCID: "with-assets",
+		Name: "With Assets",
+		Assets: []api.ThemeAsset{
+			{Key: "images/logo.png", URL: "https://example.com/logo.png"},
+			{Key: "style.css", URL: "https://example.com/style.css"},
+		},
+	}
+
+	requested := map[string]bool{}
+	serializer := NewSerializer(basePath).WithDownloader(func(url string) ([]byte, error) {
+		requested[url] = true
+		return []byte("downloaded:" + url), nil
+	})
+
+	require.NoError(t, serializer.Serialize(theme))
+
+	themePath := filepath.Join(basePath, "themes", theme.Name)
+
+	// Nested key creates subdirectories under assets/.
+	logoPath := filepath.Join(themePath, "assets", "images", "logo.png")
+	assert.True(t, testutil.FileExists(logoPath))
+	assert.Equal(t, "downloaded:https://example.com/logo.png", testutil.ReadTestFile(t, logoPath))
+
+	cssPath := filepath.Join(themePath, "assets", "style.css")
+	assert.True(t, testutil.FileExists(cssPath))
+
+	assert.True(t, requested["https://example.com/logo.png"])
+	assert.True(t, requested["https://example.com/style.css"])
+}
+
+func TestSerializer_DownloadErrorIsWarnedNotFatal(t *testing.T) {
+	basePath, cleanup := testutil.CreateTempProject(t)
+	defer cleanup()
+
+	theme := &api.Theme{
+		SCID: "broken-asset",
+		Name: "Broken Asset",
+		Assets: []api.ThemeAsset{
+			{Key: "ok.png", URL: "https://example.com/ok.png"},
+			{Key: "bad.png", URL: "https://example.com/bad.png"},
+		},
+	}
+
+	var warnings []string
+	serializer := NewSerializer(basePath).
+		WithWarner(func(msg string) { warnings = append(warnings, msg) }).
+		WithDownloader(func(url string) ([]byte, error) {
+			if url == "https://example.com/bad.png" {
+				return nil, assert.AnError
+			}
+			return []byte("ok"), nil
+		})
+
+	// A failed download must not fail the whole serialize.
+	require.NoError(t, serializer.Serialize(theme))
+
+	themePath := filepath.Join(basePath, "themes", theme.Name)
+	assert.True(t, testutil.FileExists(filepath.Join(themePath, "assets", "ok.png")))
+	assert.False(t, testutil.FileExists(filepath.Join(themePath, "assets", "bad.png")))
+
+	require.Len(t, warnings, 1)
+	assert.Contains(t, warnings[0], "bad.png")
+}
+
 func TestSerializer_Serialize(t *testing.T) {
 	tests := []struct {
 		name     string
@@ -155,7 +224,8 @@ func TestSerializer_Serialize(t *testing.T) {
 			basePath, cleanup := testutil.CreateTempProject(t)
 			defer cleanup()
 
-			serializer := NewSerializer(basePath)
+			serializer := NewSerializer(basePath).
+				WithDownloader(func(url string) ([]byte, error) { return []byte("stub-asset"), nil })
 			err := serializer.Serialize(tt.theme)
 
 			if tt.wantErr {
@@ -364,8 +434,8 @@ func TestSerializer_writeJSON(t *testing.T) {
 		{
 			name: "array data",
 			data: []api.ThemeAsset{
-				{Filename: "logo.png", ContentType: "image/png", URL: "https://example.com/logo.png"},
-				{Filename: "style.css", ContentType: "text/css", URL: "https://example.com/style.css"},
+				{Key: "logo.png", ContentType: "image/png", URL: "https://example.com/logo.png", ContentHash: "hash1"},
+				{Key: "style.css", ContentType: "text/css", URL: "https://example.com/style.css", ContentHash: "hash2"},
 			},
 			wantErr: false,
 			validate: func(t *testing.T, path string, data interface{}) {
@@ -378,8 +448,8 @@ func TestSerializer_writeJSON(t *testing.T) {
 				require.NoError(t, err)
 
 				assert.Len(t, result, 2)
-				assert.Equal(t, "logo.png", result[0]["filename"])
-				assert.Equal(t, "style.css", result[1]["filename"])
+				assert.Equal(t, "logo.png", result[0]["key"])
+				assert.Equal(t, "style.css", result[1]["key"])
 			},
 		},
 		{
@@ -487,7 +557,8 @@ func TestSerializer_RoundTrip(t *testing.T) {
 	original := testutil.TestTheme()
 
 	// Serialize
-	serializer := NewSerializer(basePath)
+	serializer := NewSerializer(basePath).
+		WithDownloader(func(url string) ([]byte, error) { return []byte("stub-asset"), nil })
 	err := serializer.Serialize(original)
 	require.NoError(t, err)
 

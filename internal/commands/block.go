@@ -58,8 +58,8 @@ func runBlockList(cmd *cobra.Command, args []string) error {
 
 	for _, block := range blocks {
 		fmt.Printf("  • %s", block.Name)
-		if block.Type != "" {
-			fmt.Printf(" (%s)", block.Type)
+		if block.Template != "" {
+			fmt.Printf(" (%s)", block.Template)
 		}
 		fmt.Println()
 	}
