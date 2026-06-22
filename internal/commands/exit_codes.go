@@ -36,4 +36,10 @@ const (
 	// ExitConfigError indicates a configuration error
 	// (missing config file, invalid YAML, no server configured)
 	ExitConfigError = 8
+
+	// ExitDiffChanges indicates `sc theme diff --exit-code` found differences
+	// between the local theme and the server. It is NOT an error — the command
+	// succeeded; this code lets CI distinguish "theme has undeployed drift"
+	// from a genuine failure (which uses ExitGenericError and friends).
+	ExitDiffChanges = 9
 )

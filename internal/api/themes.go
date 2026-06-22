@@ -16,11 +16,17 @@ type ThemeTemplate struct {
 	Content string `json:"content"`
 }
 
-// ThemeAsset represents an asset in a theme
+// ThemeAsset represents an asset in a theme.
+//
+// The server contract for GET /api/v1/themes/:id returns assets as
+// [{key, url, content_type, content_hash}]. Key is the asset's path within
+// the theme (it may contain slashes), content_hash is the SHA-256 hex digest
+// of the binary, used to skip uploads of unchanged files.
 type ThemeAsset struct {
-	Filename    string `json:"filename"`
-	ContentType string `json:"content_type"`
-	URL         string `json:"url"`
+	Key         string `json:"key"`
+	URL         string `json:"url,omitempty"`
+	ContentType string `json:"content_type,omitempty"`
+	ContentHash string `json:"content_hash,omitempty"`
 }
 
 // Themes handles theme-related endpoints

@@ -12,13 +12,13 @@ import (
 
 func TestContentBlocksList(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/content_blocks", r.URL.Path)
+		assert.Equal(t, "/api/v1/content_blocks/content", r.URL.Path)
 		assert.Equal(t, http.MethodGet, r.Method)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"content_blocks": []ContentBlock{
+			"data": []ContentBlock{
 				{SCID: "block-1", Name: "Block 1"},
 				{SCID: "block-2", Name: "Block 2"},
 			},
@@ -38,7 +38,7 @@ func TestContentBlocksList(t *testing.T) {
 
 func TestContentBlocksGet(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/content_blocks/block-123", r.URL.Path)
+		assert.Equal(t, "/api/v1/content_blocks/block-123/content", r.URL.Path)
 		assert.Equal(t, http.MethodGet, r.Method)
 
 		w.Header().Set("Content-Type", "application/json")

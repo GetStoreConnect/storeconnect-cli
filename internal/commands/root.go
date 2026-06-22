@@ -8,8 +8,11 @@ import (
 )
 
 var (
-	cfgFile string
-	rootCmd = &cobra.Command{
+	cfgFile        string
+	nonInteractive bool
+	yesFlag        bool
+	dryRun         bool
+	rootCmd        = &cobra.Command{
 		Use:   "sc",
 		Short: "StoreConnect CLI - Build and manage StoreConnect themes",
 		Long: `StoreConnect CLI is a command-line interface for developing and managing
@@ -35,6 +38,9 @@ func init() {
 	rootCmd.PersistentFlags().StringVar(&cfgFile, "config", "", "config file (default is .storeconnect/config.yaml)")
 	rootCmd.PersistentFlags().StringP("server", "s", "", "server alias to use (e.g., dev, staging, prod)")
 	rootCmd.PersistentFlags().BoolVar(&jsonOutput, "json", false, "output in JSON format (machine-readable)")
+	rootCmd.PersistentFlags().BoolVar(&nonInteractive, "non-interactive", false, "non-interactive mode (error if input required)")
+	rootCmd.PersistentFlags().BoolVarP(&yesFlag, "yes", "y", false, "automatic yes to prompts (use with caution)")
+	rootCmd.PersistentFlags().BoolVar(&dryRun, "dry-run", false, "show what would be done without making changes")
 
 	// Add version command
 	rootCmd.AddCommand(versionCmd)

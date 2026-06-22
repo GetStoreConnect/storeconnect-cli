@@ -10,22 +10,24 @@ import (
 )
 
 func init() {
-	themeCmd.AddCommand(themePublishCmd)
+	themeCmd.AddCommand(themeSubmitCmd)
 }
 
-var themePublishCmd = &cobra.Command{
-	Use:   "publish THEME_NAME",
-	Short: "Publish draft theme to live site",
-	Long: `Publish a draft theme to the live site.
+var themeSubmitCmd = &cobra.Command{
+	Use:   "submit THEME_NAME",
+	Short: "Submit draft theme for review in Salesforce",
+	Long: `Submit a draft theme for review without publishing it.
 
-You must push the theme first using 'sc theme push THEME_NAME'.
-On development/staging environments, this auto-publishes.
-On production environments, this may require manual approval in Salesforce.`,
+The draft becomes visible to the store's admins in Salesforce (the Change
+Request flow) but is not live. Use 'sc theme publish THEME_NAME' when the
+change should go live.
+
+You must push the theme first using 'sc theme push THEME_NAME'.`,
 	Args: cobra.ExactArgs(1),
-	RunE: runThemePublish,
+	RunE: runThemeSubmit,
 }
 
-func runThemePublish(cmd *cobra.Command, args []string) error {
+func runThemeSubmit(cmd *cobra.Command, args []string) error {
 	themeName := args[0]
 	formatter := ui.NewFormatter()
 
@@ -87,52 +89,32 @@ func runThemePublish(cmd *cobra.Command, args []string) error {
 	client := api.NewClient(cred.URL, cred.StoreSFID, cred.APIKey, api.WithOrgID(cred.OrgID))
 	contentChangesService := api.NewContentChanges(client)
 
-	// Publish content change (only show spinner if not JSON mode)
 	var spinner *ui.Spinner
 	if !jsonOutput {
-		spinner = ui.NewSpinner("Publishing theme")
+		spinner = ui.NewSpinner("Submitting theme for review")
 		spinner.Start()
 	}
 
-	publishResp, err := contentChangesService.Publish(syncState.ContentChangeSCID)
+	contentChange, err := contentChangesService.Submit(syncState.ContentChangeSCID)
 	if err != nil {
 		if spinner != nil {
-			spinner.Error(fmt.Sprintf("Failed to publish theme: %v", err))
+			spinner.Error(fmt.Sprintf("Failed to submit theme: %v", err))
 		}
 		return outputError(err)
 	}
 
-	contentChangeID := syncState.ContentChangeSCID
-
-	// Check if this was submitted for approval or actually published
-	if publishResp.Status == "review" {
-		// Submitted for approval - keep content change in sync state
-		if spinner != nil {
-			spinner.Stop()
-			formatter.Info(publishResp.Message)
-			if publishResp.Note != "" {
-				formatter.Dim(publishResp.Note)
-			}
-			formatter.Newline()
-			formatter.Dim(fmt.Sprintf("Content change ID: %s", contentChangeID))
-			formatter.Dim("The theme will be published after approval in Salesforce")
-		}
-	} else {
-		// Actually published - clear content change from sync state
-		syncState.ClearContentChange()
-
-		if spinner != nil {
-			spinner.Success(publishResp.Message)
-		}
+	if spinner != nil {
+		spinner.Success("Theme submitted for review")
+		formatter.Newline()
+		formatter.Dim(fmt.Sprintf("Content change ID: %s (status: %s)", contentChange.SCID, contentChange.Status))
+		formatter.Dim("Admins can review the change in Salesforce; publish it with 'sc theme publish " + themeName + "'")
 	}
 
-	// JSON output
 	if jsonOutput {
-		return outputResponse(ThemePublishResponse{
-			ThemeName:       themeName,
-			ContentChangeID: contentChangeID,
-			Status:          publishResp.Status,
-			Message:         publishResp.Message,
+		return outputResponse(map[string]interface{}{
+			"theme_name":        themeName,
+			"content_change_id": contentChange.SCID,
+			"status":            contentChange.Status,
 		}, nil)
 	}
 

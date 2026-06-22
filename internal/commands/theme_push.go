@@ -112,6 +112,30 @@ func runThemePush(cmd *cobra.Command, args []string) error {
 	// Create API client
 	client := api.NewClient(cred.URL, cred.StoreSFID, cred.APIKey, api.WithOrgID(cred.OrgID))
 	contentChangesService := api.NewContentChanges(client)
+	themesService := api.NewThemes(client)
+	mediaService := api.NewMedia(client)
+
+	// Determine which local assets need uploading by hash-diffing against the
+	// server's copy of the theme. Unchanged binaries are skipped entirely.
+	localAssets, err := theme.ReadLocalAssets(fmt.Sprintf("themes/%s", themeName))
+	if err != nil {
+		if spinner != nil {
+			spinner.Error(fmt.Sprintf("Failed to read assets: %v", err))
+		}
+		return outputError(err)
+	}
+
+	var changedAssets []theme.LocalAsset
+	if len(localAssets) > 0 {
+		serverTheme, err := themesService.Get(themeID)
+		if err != nil {
+			if spinner != nil {
+				spinner.Error(fmt.Sprintf("Failed to fetch server theme: %v", err))
+			}
+			return outputError(err)
+		}
+		changedAssets = theme.SelectChangedAssets(localAssets, serverTheme.Assets)
+	}
 
 	// Create content change (draft)
 	contentChange, err := contentChangesService.Create(themeID)
@@ -120,6 +144,39 @@ func runThemePush(cmd *cobra.Command, args []string) error {
 			spinner.Error(fmt.Sprintf("Failed to create draft: %v", err))
 		}
 		return outputError(err)
+	}
+
+	// Upload each changed asset binary through the media flow and collect the
+	// hosted URLs so they can be registered on the draft.
+	assets := make([]api.ContentChangeAsset, 0, len(changedAssets))
+	for _, asset := range changedAssets {
+		if spinner != nil {
+			spinner.UpdateMessage(fmt.Sprintf("Uploading asset %s", asset.Key))
+		}
+
+		fileType := theme.InferFileType(asset.Key)
+		upload, err := mediaService.UploadURL(fileType, asset.Key, asset.ContentType)
+		if err != nil {
+			if spinner != nil {
+				spinner.Error(fmt.Sprintf("Failed to get upload URL for %s: %v", asset.Key, err))
+			}
+			return outputError(err)
+		}
+
+		hostedURL, err := mediaService.UploadFile(upload, asset.Key, asset.Content)
+		if err != nil {
+			if spinner != nil {
+				spinner.Error(fmt.Sprintf("Failed to upload asset %s: %v", asset.Key, err))
+			}
+			return outputError(err)
+		}
+
+		assets = append(assets, api.ContentChangeAsset{
+			Key:         asset.Key,
+			URL:         hostedURL,
+			ContentType: asset.ContentType,
+			ContentHash: asset.ContentHash,
+		})
 	}
 
 	if spinner != nil {
@@ -136,9 +193,9 @@ func runThemePush(cmd *cobra.Command, args []string) error {
 		}
 	}
 
-	// Update content change with templates
-	if len(templates) > 0 {
-		if err := contentChangesService.Update(contentChange.SCID, themeID, templates); err != nil {
+	// Update content change with templates and any uploaded assets
+	if len(templates) > 0 || len(assets) > 0 {
+		if err := contentChangesService.Update(contentChange.SCID, themeID, templates, assets); err != nil {
 			if spinner != nil {
 				spinner.Error(fmt.Sprintf("Failed to upload templates: %v", err))
 			}

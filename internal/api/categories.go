@@ -1,13 +1,14 @@
 package api
 
-// Category represents a StoreConnect category
+// Category represents a StoreConnect product category
 type Category struct {
-	SCID     string     `json:"sc_id"`
-	SFID     string     `json:"sfid,omitempty"`
-	Name     string     `json:"name"`
-	Slug     string     `json:"slug,omitempty"`
-	ParentID string     `json:"parent_id,omitempty"`
-	Children []Category `json:"children,omitempty"`
+	ID          string     `json:"id,omitempty"`
+	SCID        string     `json:"sc_id"`
+	SFID        string     `json:"sfid,omitempty"`
+	Name        string     `json:"name"`
+	DisplayName string     `json:"display_name,omitempty"`
+	Path        string     `json:"path,omitempty"`
+	Children    []Category `json:"children,omitempty"`
 }
 
 // Categories handles category-related endpoints
@@ -23,21 +24,21 @@ func NewCategories(client *Client) *Categories {
 // List returns all categories
 func (c *Categories) List() ([]Category, error) {
 	var result struct {
-		Categories []Category `json:"categories"`
+		Data []Category `json:"data"`
 	}
 
-	err := c.client.Get("/api/v1/categories", &result, nil)
+	err := c.client.Get("/api/v1/categories/content", &result, nil)
 	if err != nil {
 		return nil, err
 	}
 
-	return result.Categories, nil
+	return result.Data, nil
 }
 
-// Tree returns category hierarchy
+// Tree returns the category hierarchy
 func (c *Categories) Tree() ([]Category, error) {
 	var result struct {
-		Categories []Category `json:"categories"`
+		Data []Category `json:"data"`
 	}
 
 	err := c.client.Get("/api/v1/categories/tree", &result, nil)
@@ -45,13 +46,13 @@ func (c *Categories) Tree() ([]Category, error) {
 		return nil, err
 	}
 
-	return result.Categories, nil
+	return result.Data, nil
 }
 
-// Get retrieves a single category by ID
+// Get retrieves a single category by sc_id, id or path
 func (c *Categories) Get(id string) (*Category, error) {
 	var result Category
-	err := c.client.Get("/api/v1/categories/"+id, &result, nil)
+	err := c.client.Get("/api/v1/categories/"+id+"/content", &result, nil)
 	if err != nil {
 		return nil, err
 	}

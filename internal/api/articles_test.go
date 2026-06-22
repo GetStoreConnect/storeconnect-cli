@@ -12,13 +12,13 @@ import (
 
 func TestArticlesList(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/articles", r.URL.Path)
+		assert.Equal(t, "/api/v1/articles/content", r.URL.Path)
 		assert.Equal(t, http.MethodGet, r.Method)
 
 		w.Header().Set("Content-Type", "application/json")
 		w.WriteHeader(http.StatusOK)
 		json.NewEncoder(w).Encode(map[string]interface{}{
-			"articles": []Article{
+			"data": []Article{
 				{SCID: "art-1", Title: "Article 1"},
 				{SCID: "art-2", Title: "Article 2"},
 			},
@@ -38,7 +38,7 @@ func TestArticlesList(t *testing.T) {
 
 func TestArticlesGet(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		assert.Equal(t, "/api/v1/articles/art-123", r.URL.Path)
+		assert.Equal(t, "/api/v1/articles/art-123/content", r.URL.Path)
 		assert.Equal(t, http.MethodGet, r.Method)
 
 		w.Header().Set("Content-Type", "application/json")
